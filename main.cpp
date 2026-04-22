@@ -47,6 +47,7 @@ int main() {
                 }
                 cout << "\n";
             }
+            cout.flush(); // Ensure output is written
         }
 
         // Ignore rest of line if any

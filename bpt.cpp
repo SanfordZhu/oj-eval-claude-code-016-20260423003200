@@ -164,7 +164,7 @@ int BPlusTree::find_leaf(const string& key_str) {
 
         // Find child to follow
         int i = 0;
-        while (i < node.key_count && strcmp(key_str.c_str(), node.keys[i].str) >= 0) {
+        while (i < node.key_count && strcmp(key_str.c_str(), node.keys[i].str) > 0) {
             i++;
         }
 
@@ -299,7 +299,7 @@ void BPlusTree::insert_into_parent(int left_offset, const Key& key, int right_of
 
     // Find position to insert key
     int pos = 0;
-    while (pos < parent.key_count && strcmp(key.str, parent.keys[pos].str) >= 0) {
+    while (pos < parent.key_count && strcmp(key.str, parent.keys[pos].str) > 0) {
         pos++;
     }
 
