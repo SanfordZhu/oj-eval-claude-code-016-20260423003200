@@ -38,49 +38,74 @@ Node::Node() : is_leaf(false), key_count(0), next_leaf(-1), parent(-1) {
 
 // BPlusTree implementation
 BPlusTree::BPlusTree(const string& fname) : filename(fname), root_offset(-1), free_list_head(-1) {
-    // Try to open existing file
-    fstream file(filename, ios::in | ios::binary);
-    if (file) {
-        // Read header: root_offset, free_list_head
-        file.read(reinterpret_cast<char*>(&root_offset), sizeof(root_offset));
-        file.read(reinterpret_cast<char*>(&free_list_head), sizeof(free_list_head));
-        file.close();
-    } else {
+    // Open file for reading and writing
+    file.open(filename, ios::in | ios::out | ios::binary);
+
+    if (!file) {
         // Create new file
+        file.open(filename, ios::out | ios::binary);
+        file.close();
+        file.open(filename, ios::in | ios::out | ios::binary);
+
         root_offset = -1;
         free_list_head = -1;
 
         // Write header
-        fstream new_file(filename, ios::out | ios::binary);
-        new_file.write(reinterpret_cast<const char*>(&root_offset), sizeof(root_offset));
-        new_file.write(reinterpret_cast<const char*>(&free_list_head), sizeof(free_list_head));
-        new_file.close();
+        file.seekp(0);
+        file.write(reinterpret_cast<const char*>(&root_offset), sizeof(root_offset));
+        file.write(reinterpret_cast<const char*>(&free_list_head), sizeof(free_list_head));
+        file.flush();
+    } else {
+        // Read header
+        file.seekg(0);
+        file.read(reinterpret_cast<char*>(&root_offset), sizeof(root_offset));
+        file.read(reinterpret_cast<char*>(&free_list_head), sizeof(free_list_head));
     }
 }
 
 BPlusTree::~BPlusTree() {
+    flush_all();
+
     // Update header
-    fstream file(filename, ios::in | ios::out | ios::binary);
-    if (file) {
-        file.write(reinterpret_cast<const char*>(&root_offset), sizeof(root_offset));
-        file.write(reinterpret_cast<const char*>(&free_list_head), sizeof(free_list_head));
-    }
+    file.seekp(0);
+    file.write(reinterpret_cast<const char*>(&root_offset), sizeof(root_offset));
+    file.write(reinterpret_cast<const char*>(&free_list_head), sizeof(free_list_head));
+    file.flush();
+    file.close();
 }
 
 void BPlusTree::read_node(int offset, Node& node) {
-    fstream file(filename, ios::in | ios::binary);
-    if (!file) return;
+    // Check cache first
+    auto it = node_cache.find(offset);
+    if (it != node_cache.end()) {
+        node = it->second;
+        return;
+    }
 
+    // Read from file
     file.seekg(sizeof(root_offset) + sizeof(free_list_head) + offset * sizeof(Node));
     file.read(reinterpret_cast<char*>(&node), sizeof(Node));
+
+    // Store in cache
+    node_cache[offset] = node;
 }
 
 void BPlusTree::write_node(int offset, const Node& node) {
-    fstream file(filename, ios::in | ios::out | ios::binary);
-    if (!file) return;
+    // Update cache
+    node_cache[offset] = node;
+    dirty_nodes.insert(offset);
+}
 
-    file.seekp(sizeof(root_offset) + sizeof(free_list_head) + offset * sizeof(Node));
-    file.write(reinterpret_cast<const char*>(&node), sizeof(Node));
+void BPlusTree::flush_all() {
+    for (int offset : dirty_nodes) {
+        auto it = node_cache.find(offset);
+        if (it != node_cache.end()) {
+            file.seekp(sizeof(root_offset) + sizeof(free_list_head) + offset * sizeof(Node));
+            file.write(reinterpret_cast<const char*>(&it->second), sizeof(Node));
+        }
+    }
+    file.flush();
+    dirty_nodes.clear();
 }
 
 int BPlusTree::allocate_node() {
@@ -93,19 +118,21 @@ int BPlusTree::allocate_node() {
         return offset;
     } else {
         // Append new node at end
-        fstream file(filename, ios::in | ios::out | ios::binary | ios::ate);
-        if (!file) return -1;
-
-        // Get current file size
         file.seekg(0, ios::end);
         long file_size = file.tellg();
 
         // Calculate offset (0-based index of nodes)
         int offset = (file_size - (sizeof(root_offset) + sizeof(free_list_head))) / sizeof(Node);
 
-        // Write empty node
+        // Create empty node
         Node new_node;
+
+        // Write to file
+        file.seekp(sizeof(root_offset) + sizeof(free_list_head) + offset * sizeof(Node));
         file.write(reinterpret_cast<const char*>(&new_node), sizeof(Node));
+
+        // Add to cache
+        node_cache[offset] = new_node;
 
         return offset;
     }

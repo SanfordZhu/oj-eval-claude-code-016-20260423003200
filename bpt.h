@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <unordered_map>
+#include <unordered_set>
+#include <fstream>
 
 // Constants for B+ Tree
 const int MAX_KEY_LEN = 64;
@@ -36,12 +39,18 @@ struct Node {
 class BPlusTree {
 private:
     std::string filename;
+    std::fstream file;
     int root_offset;
     int free_list_head;
+
+    // Cache: store all nodes in memory for performance
+    std::unordered_map<int, Node> node_cache;
+    std::unordered_set<int> dirty_nodes;
 
     // File operations
     void read_node(int offset, Node& node);
     void write_node(int offset, const Node& node);
+    void flush_all();
     int allocate_node();
     void deallocate_node(int offset);
 
