@@ -186,18 +186,18 @@ void BPlusTree::insert(const string& key_str, int value) {
         return;
     }
 
-    // Find leaf node where key should be inserted
-    int leaf_offset = find_leaf(key_str);
-    Node leaf;
-    read_node(leaf_offset, leaf);
-
-    // Check if key already exists
-    for (int i = 0; i < leaf.key_count; i++) {
-        if (leaf.keys[i] == new_key) {
+    // Check if key-value pair already exists
+    // Need to search all leaves with this key
+    vector<int> existing_values = find(key_str);
+    for (int val : existing_values) {
+        if (val == value) {
             // Key-value pair already exists, do nothing
             return;
         }
     }
+
+    // Find leaf node where key should be inserted
+    int leaf_offset = find_leaf(key_str);
 
     // Insert into leaf
     insert_into_leaf(leaf_offset, new_key);
