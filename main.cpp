@@ -6,6 +6,7 @@
 #include <set>
 #include <algorithm>
 #include <cstring>
+#include <cstdint>
 
 using namespace std;
 
