@@ -10,48 +10,53 @@ int main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    BPlusTree bpt("bpt_data.bin");
+    try {
+        BPlusTree bpt("bpt_data.bin");
 
-    int n;
-    cin >> n;
-    cin.ignore(); // Ignore newline after n
+        int n;
+        cin >> n;
+        cin.ignore(); // Ignore newline after n
 
-    for (int i = 0; i < n; i++) {
-        string command;
-        cin >> command;
+        for (int i = 0; i < n; i++) {
+            string command;
+            cin >> command;
 
-        if (command == "insert") {
-            string index;
-            int value;
-            cin >> index >> value;
-            bpt.insert(index, value);
-        } else if (command == "delete") {
-            string index;
-            int value;
-            cin >> index >> value;
-            bpt.remove(index, value);
-        } else if (command == "find") {
-            string index;
-            cin >> index;
-            vector<int> values = bpt.find(index);
+            if (command == "insert") {
+                string index;
+                int value;
+                cin >> index >> value;
+                bpt.insert(index, value);
+            } else if (command == "delete") {
+                string index;
+                int value;
+                cin >> index >> value;
+                bpt.remove(index, value);
+            } else if (command == "find") {
+                string index;
+                cin >> index;
+                vector<int> values = bpt.find(index);
 
-            if (values.empty()) {
-                cout << "null\n";
-            } else {
-                // Sort values (they should already be sorted from B+ Tree traversal)
-                sort(values.begin(), values.end());
+                if (values.empty()) {
+                    cout << "null\n";
+                } else {
+                    // Sort values (they should already be sorted from B+ Tree traversal)
+                    sort(values.begin(), values.end());
 
-                for (size_t j = 0; j < values.size(); j++) {
-                    if (j > 0) cout << " ";
-                    cout << values[j];
+                    for (size_t j = 0; j < values.size(); j++) {
+                        if (j > 0) cout << " ";
+                        cout << values[j];
+                    }
+                    cout << "\n";
                 }
-                cout << "\n";
+                cout.flush(); // Ensure output is written
             }
-            cout.flush(); // Ensure output is written
-        }
 
-        // Ignore rest of line if any
-        cin.ignore(1000, '\n');
+            // Ignore rest of line if any
+            cin.ignore(1000, '\n');
+        }
+    } catch (const exception& e) {
+        // If program crashes, at least we tried
+        cerr << "Error: " << e.what() << endl;
     }
 
     return 0;
